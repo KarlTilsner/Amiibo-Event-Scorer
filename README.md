@@ -1,0 +1,2 @@
+# Amiibo Event Scorer
+
