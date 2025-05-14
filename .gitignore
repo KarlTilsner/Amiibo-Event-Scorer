@@ -2,3 +2,4 @@ dist/
 build/
 myenv/
 __pycache__/
+temp

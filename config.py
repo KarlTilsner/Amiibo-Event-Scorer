@@ -4,15 +4,12 @@ import os
 def clear_console():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-with open("api_key.json", "r") as file:
-    api = json.load(file)
+with open("config.json", "r") as file:
+    config = json.load(file)
 
-CHALLONGE_USERNAME = api["challonge_username"]
-CHALLONGE_API_KEY = api["challonge_api_key"]
-
-with open("base_points.json", "r") as file:
-    base_points = json.load(file)
-
-
-TOUR_RECORD_HEADER = ["Rank", "Trainer", "Tournament Length"]
-COMPETITOR_POINTS_HEADER = ["Rank", "Trainer", "Points"]
+CHALLONGE_USERNAME = config["challonge_username"]
+CHALLONGE_API_KEY = config["challonge_api_key"]
+COMPETITOR_BASE_POINTS = config["competitor_base_points"]
+TOUR_RECORD_HEADER = config["tour_record_header"]
+COMPETITOR_POINTS_HEADER = config["competitor_points_header"]
+COMPETITOR_BONUS_POINTS = config["competitor_bonus_points"]

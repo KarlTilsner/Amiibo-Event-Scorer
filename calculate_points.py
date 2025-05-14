@@ -40,16 +40,14 @@ def competitor_points(trainer_ranks):
 
     # Score each entry
     for entry in trainer_ranks:
-        trainer, score = points_earned(entry, amiibo_count)
+        trainer, score = competitor_points_earned(entry, amiibo_count)
         competitors[trainer] += score
-
-    # print(competitors)
 
     return competitors
 
 
 
-def points_earned(entry, amiibo_count):
+def competitor_points_earned(entry, amiibo_count):
     rank = entry[0]
     trainer = entry[1].split(" - ", 1)[0].strip()
     tour_len = int(entry[2])
@@ -65,9 +63,47 @@ def points_earned(entry, amiibo_count):
     if amiibo_count >= 512:
         points_bracket = 512
 
+    expected_matches = points_bracket * 2 - 1
+    modifier = 0
+    if tour_len > expected_matches:
+        modifier = (tour_len - expected_matches) * config.COMPETITOR_BONUS_POINTS
+
+    points = 0
+    if f"{rank}" in config.COMPETITOR_BASE_POINTS[f"{points_bracket}"]:
+        points = int(config.COMPETITOR_BASE_POINTS[f"{points_bracket}"][f"{rank}"] + modifier)
+
+    return trainer, points
+
+
+
+
+
+
+
+# WIP: Will be used to determine how many points a host will earn for their tournament.
+def host_points_earned(entry, amiibo_count):
+    rank = entry[0]
+    trainer = entry[1].split(" - ", 1)[0].strip()
+    tour_len = int(entry[2])
+
+    if amiibo_count < 64:
+        points_bracket = 32
+    if amiibo_count >= 64 and amiibo_count < 128:
+        points_bracket = 64
+    if amiibo_count >= 128 and amiibo_count < 256:
+        points_bracket = 128
+    if amiibo_count >= 256 and amiibo_count < 512:
+        points_bracket = 256
+    if amiibo_count >= 512:
+        points_bracket = 512
+
+    expected_matches = points_bracket * 2 - 1
+    modifier = 0
+    if tour_len > expected_matches:
+        modifier = (tour_len - expected_matches) * 0.2
 
     points = 0
     if f"{rank}" in config.base_points[f"{points_bracket}"]:
-        points = config.base_points[f"{points_bracket}"][f"{rank}"]
+        points = int(config.base_points[f"{points_bracket}"][f"{rank}"] + modifier)
 
     return trainer, points
