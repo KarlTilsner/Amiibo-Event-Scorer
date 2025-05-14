@@ -3,7 +3,17 @@
     "challonge_api_key": "challonge_api_key",
     "tour_record_header": ["Rank", "Trainer", "Tournament Length", "Host"],
     "competitor_points_header": ["Rank", "Trainer", "Points"],
+    "host_points_header": ["Rank", "Host", "Points"],
     "competitor_bonus_points": 0.01,
+    "host_bonus_points": 0.2,
+
+    "host_base_points": {
+        "32": 10,
+        "64": 25,
+        "128": 55,
+        "256": 120,
+        "512": 250
+    },
 
     "competitor_base_points": {
         "32": {

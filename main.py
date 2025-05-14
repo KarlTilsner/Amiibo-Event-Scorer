@@ -1,20 +1,20 @@
 from urllib.parse import urlparse
-from datetime import datetime
 import config
-from get_tournament import tournament_ranks, multistage_tournament_ranks
-from tsv import openTSV, writeTSV
-from calculate_points import competitor_points, compile_points
+from tsv import openTSV, writeTSV, getAllInFolder
+import get_tournament
+import calculate_points
 
 
 
 def record_tournaments():
     # Scrapes a tournament and stores trainer ranks and tournament length
     URL = urlparse(input("Please enter a challonge URL: ")).path.strip("/")
-    writeTSV(f"./Tournament Records/{URL}.tsv", tournament_ranks(URL), config.TOUR_RECORD_HEADER)
+    writeTSV(f"./Tournament Records/{URL}.tsv", get_tournament.tournament_ranks(URL), config.TOUR_RECORD_HEADER)
 
     while True:
-        user_input = input("Record another tournament? [y, n]")
+        user_input = input("Record another tournament? [y, n]: ")
         if user_input == "y":
+            print("\n")
             record_tournaments()
         if user_input == "n":
             return
@@ -24,35 +24,14 @@ def record_tournaments():
 
 
 def record_multistage_tournaments():
-    tours_merged = {}
-    all_tours = {}
     HOST = input("Please enter the name of the tournament host: ")
 
-    # Run a loop here to collect all tournament pools
-    while True:
-        user_input = input("Please enter a challonge URL or type [e] to stop recording tour pools: ") # Accepts the URL or breaks loop if e
-        if user_input == "e":
-            break
-        URL = urlparse(user_input).path.strip("/")
-
-        # Add info from tour to tours_merged
-        tour_players, tour_details = multistage_tournament_ranks(URL, HOST)
-
-        for player, tournament_data in tour_players.items():
-            if player not in tours_merged:
-                tours_merged[player] = {}
-
-            tours_merged[player][URL] = tournament_data[URL]
-
-        for tour, tournament_data in tour_details.items():
-            if tour not in all_tours:
-                all_tours[tour] = {}
-
-            all_tours[tour] = tournament_data
+    # Loops untll user has entered all pools
+    tours_merged, all_tours = get_tournament.get_bracket_pools()
 
     # Final check before processing
     while True:
-        user_input = input("Would you like to process and save the tour pools you just collected? [y, n]")
+        user_input = input("Would you like to process and save the tour pools you just collected? [y, n]: ")
         if user_input == "y":
             break
         if user_input == "n":
@@ -60,51 +39,58 @@ def record_multistage_tournaments():
 
         print("Please enter 'y' or 'n'")
 
-    # Filter out items where 'completed_at' is the string "None"
-    valid_tours = [
-        (name, data)
-        for name, data in all_tours.items()
-        if data.get("completed_at") != "None"
-    ]
-
-    # Only proceed if we have at least one valid entry
-    if valid_tours:
-        latest_tour = max(
-            valid_tours,
-            key=lambda item: datetime.fromisoformat(item[1]["completed_at"])
-        )
-        print("Latest tournament:", latest_tour[0])
-    else:
-        print("No tournaments with valid completed_at date.")
-
-    FINALS_URL = latest_tour[0]
-    with_placement = []
-    without_placement = []
-
-    for name, data in tours_merged.items():
-        if FINALS_URL in data:
-            with_placement.append((name, data))
-        else:
-            without_placement.append((name, data))
-
-    # Sort only the ones with placements
-    with_placement.sort(key=lambda x: x[1][FINALS_URL])
-
-    # Combine the two lists
-    sorted_all = with_placement + without_placement
-
-    total_length = sum(tour["tour_length"] for tour in all_tours.values())
-
-    # After collecting tournament pool info
-    final_tour_placements = []
-    # Print them
-    for name, data in sorted_all:
-        placement = data.get(FINALS_URL, f"{len(with_placement) + 1}")
-        print(f"{name}: {placement}")
-        final_tour_placements.append([placement, name, total_length, HOST])
+    final_tour_placements, FINALS_URL = get_tournament.determine_multistage_ranks(tours_merged, all_tours, HOST)
 
     writeTSV(f"./Tournament Records/{FINALS_URL}.tsv", final_tour_placements, config.TOUR_RECORD_HEADER)
     input("Finished! Press any key to return")
+    return
+
+
+
+def compile_competitor_points():
+    filepaths = getAllInFolder()
+    total_points = {}
+
+    for path in filepaths:
+        # Returns a dictionary of trainers and their scores from passed tournament
+        tour_points = calculate_points.competitor_points(openTSV(path))
+
+        for trainer, points in tour_points.items():
+            total_points[f"{trainer}"] = total_points.get(f"{trainer}", 0) + points
+
+    total_points = dict(sorted(total_points.items(), key=lambda item: item[1], reverse=True))
+
+    tsv_data = []
+    for i, (trainer, points) in enumerate(total_points.items(), start=1):
+        tsv_data.append([i, trainer, points])
+    
+    writeTSV("./Spreadsheets/Competitor Points.tsv", tsv_data, config.COMPETITOR_POINTS_HEADER)
+
+    input("Finished! Press any key to return to the menu.")
+    return
+
+
+
+def compile_host_points():
+    filepaths = getAllInFolder()
+    total_points = {}
+
+    for path in filepaths:
+        # Returns a dictionary of hosts and their scores from passed tournament
+        tour_points, host_name = calculate_points.host_points(openTSV(path))
+
+        total_points[f"{host_name}"] = total_points.get(f"{host_name}", 0) + tour_points
+         
+        
+    total_points = dict(sorted(total_points.items(), key=lambda item: item[1], reverse=True))
+
+    tsv_data = []
+    for i, (host, points) in enumerate(total_points.items(), start=1):
+        tsv_data.append([i, host, points])
+    
+    writeTSV("./Spreadsheets/Host Points.tsv", tsv_data, config.HOST_POINTS_HEADER)
+
+    input("Finished! Press any key to return to the menu.")
     return
 
 
@@ -115,7 +101,7 @@ def main():
         "Main menu: \n"
         "(1) Record single tournaments \n"
         "(2) Record tournaments with multiple pools \n"
-        "(3) Calculate trainer points from recorded tournaments \n"
+        "(3) Calculate competitor points from recorded tournaments \n"
         "(4) Calculate host points from recorded tournaments \n"
         "(E) Exit \n"
         )
@@ -126,9 +112,9 @@ def main():
         case "2":
             record_multistage_tournaments()
         case "3":
-            compile_points()
+            compile_competitor_points()
         case "4":
-            input("WIP, press any key to return")
+            compile_host_points()
         case "e":
             return
         case _:
