@@ -87,6 +87,12 @@ def determine_multistage_ranks(tours_merged, all_tours, HOST):
     else:
         print("No tournaments with valid completed_at date.")
 
+    tours_merged = dict(sorted(
+        tours_merged.items(),
+        key=lambda item: len(item[1]),
+        reverse=True
+    ))
+
     FINALS_URL = latest_tour[0]
     with_placement = []
     without_placement = []
@@ -109,8 +115,13 @@ def determine_multistage_ranks(tours_merged, all_tours, HOST):
     final_tour_placements = []
     # Print them
     for name, data in sorted_all:
-        placement = data.get(FINALS_URL, f"{len(with_placement) + 1}")
-        print(f"{name}: {placement}")
+        if len(with_placement) < 32:
+            placement = data.get(FINALS_URL, f"{33}")
+
+        if len(with_placement) >= 32:
+            placement = data.get(FINALS_URL, f"{len(with_placement) + 1}")
+
+        # print(f"{name}: {placement}")
         final_tour_placements.append([placement, name, total_length, HOST])
 
     return final_tour_placements, FINALS_URL
