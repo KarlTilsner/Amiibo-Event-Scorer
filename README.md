@@ -3,7 +3,9 @@ Created to drastically reduce the amount of work it takes to award event points 
 
 ## Before you start
 Simply enter your challonge api key and username into `config.json`. Challonge requires this in order to collect tournament results.
+
 `"challonge_username": "your-challonge-username"`
+
 `"challonge_api_key": "your-challonge_api_key"`
 
 ## Get tournament results
